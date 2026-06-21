@@ -15,7 +15,7 @@ INSTAGRAM_API_URL = "https://graph.instagram.com/v21.0"
 
 client = Anthropic(api_key=ANTHROPIC_API_KEY)
 
-# Hər bir istifadəçinin söhbət tarixçəsini yadda saxlayan lüğət (In-memory memory)
+# Söhbət tarixçəsini saxlayan lüğət
 conversations = {}
 
 SYSTEM_PROMPT = """
@@ -40,7 +40,7 @@ TechPoint Academy kibertehlükəsizlik və İT sahəsində peşəkar tədris mə
 2. RED TEAM (Ethical Hacking / Hücum):
    - Kimlər üçündür: İlkin İT biliyi olan, pentest (sızma testləri) və ofensiv təhlükəsizlik sahəsinə maraq göstərənlər.
    - Mövzular: Penetration Testing, Vulnerability Assessment, Web/Network hacking, Social Engineering.
-   - Müəllim: Bəhram Ağahəmdli — Hazırda ADSEA-da (Azərbaycan Dovlet Su Ehtiyatları Agentliyi) baş pentester / baş məsləhətçidir. Bir çox özəl şirkətlərdə zəngin təcrübəsi var.
+   - Müəllim: Bəhram Ağahəmdli — Hazırda ADSEA-da (Azərbaycan Dövlət Su Ehtiyatları Agentliyi) baş pentester / baş məsləhətçidir. Bir çox özəl şirkətlərdə zəngin təcrübəsi var.
    - Qiymət: Standart 279 AZN, YAY ENDİRİMİ ilə cəmi 179 AZN.
    - Beynəlxalq sertifikatlara hazırlıq proqramı daxildir.
 
@@ -92,27 +92,22 @@ Nigar: "Salam! Xoş gəldiniz TechPoint-ə! İT yoxsa kibertehlükəsizlik sahə
 
 def get_ai_response(sender_id, user_message):
     try:
-        # İstifadəçi ilk dəfə yazırsa, tarixçə massivi yaradılır
         if sender_id not in conversations:
             conversations[sender_id] = []
         
-        # Yeni mesaj tarixçəyə əlavə edilir
         conversations[sender_id].append({"role": "user", "content": user_message})
         
-        # Claude API çağırışı (Stabil "claude-3-5-sonnet-latest" modeli ilə)
+        # MODEL ADI DƏQİQ TUŞLANDI: Anthropic Messages API formatına tam uyğundur
         response = client.messages.create(
-            model="claude-3-5-sonnet-latest",
+            model="claude-3-5-sonnet-20241022",
             max_tokens=300,
             system=SYSTEM_PROMPT,
             messages=conversations[sender_id]
         )
         
         ai_text = response.content[0].text
-        
-        # AI-ın cavabı da tarixçəyə əlavə edilir
         conversations[sender_id].append({"role": "assistant", "content": ai_text})
         
-        # Yaddaşın çox şişməməsi üçün son 20 mesajı saxlayaq
         if len(conversations[sender_id]) > 20:
             conversations[sender_id] = conversations[sender_id][-20:]
             
@@ -157,12 +152,18 @@ def handle_webhook():
         if data.get("object") == "instagram":
             for entry in data.get("entry", []):
                 
-                # 1. Changes altındakı mesajlar üçün emal
+                # 1. Changes altındakı mesajlar üçün emal (Echo-ları filterləyirik)
                 for change in entry.get("changes", []):
                     if change.get("field") == "messages":
                         value = change.get("value", {})
+                        
+                        # Əgər mesaj botun öz göndərdiyi "echo" mesajıdırsa, emal etmə
+                        if value.get("message", {}).get("is_echo") or value.get("message", {}).get("is_deleted"):
+                            continue
+                            
                         sender_id = value.get("sender", {}).get("id")
                         message_text = value.get("message", {}).get("text")
+                        
                         if sender_id and message_text and sender_id != INSTAGRAM_PAGE_ID:
                             print(f"Tələbə ({sender_id}): {message_text}")
                             ai_response = get_ai_response(sender_id, message_text)
@@ -171,6 +172,10 @@ def handle_webhook():
 
                 # 2. Standart Messaging hadisələri üçün emal
                 for messaging_event in entry.get("messaging", []):
+                    # 'read' (oxundu) bildirişləri gələndə içində 'message' olmur, keçirik
+                    if "message" not in messaging_event:
+                        continue
+                        
                     sender_id = messaging_event.get("sender", {}).get("id")
                     message = messaging_event.get("message", {})
                     message_text = message.get("text")
