@@ -89,9 +89,9 @@ Nigar: "Salam! Xoş gəldiniz TechPoint-ə! İT yoxsa kibertehlükəsizlik sahə
 
 def get_ai_response(user_message):
     try:
-        # İLK KODDAKI KİMİ REQURMENT: Sırf gələn tək mesajı göndərir, model adı 404 xətası verməyən formatda düzəldildi
+        # MODEL ADI DEYISILDI: Köhnə kitabxanaların mütləq tanıdığı və stabil işləyən Haiku modeli təyin olundu
         response = client.messages.create(
-            model="claude-3-5-sonnet-20241022",
+            model="claude-3-haiku-20240307",
             max_tokens=300,
             system=SYSTEM_PROMPT,
             messages=[{"role": "user", "content": user_message}]
