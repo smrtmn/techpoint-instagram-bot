@@ -1,8 +1,3 @@
-"""
-TechPoint Academy Instagram AI Chatbot
-Meta Webhook + Claude API inteqrasiyasii
-"""
-
 import os
 import json
 import requests
@@ -20,112 +15,128 @@ INSTAGRAM_API_URL = "https://graph.instagram.com/v21.0"
 
 client = Anthropic(api_key=ANTHROPIC_API_KEY)
 
-SYSTEM_PROMPT = """
-Sen TechPoint Academy-nin SMM emelkdashisan, adin Nigardir. Instagram-da yazanlara cavab verirsen. Seni AI kimi tanitma, sadece Nigar kimi yaz. Canli, isti, dostcasina ve qisa yaz — Instagram mesaj formatinda. Uzun abzaslar yazma.
+# Hər bir istifadəçinin söhbət tarixçəsini yadda saxlayan lüğət (In-memory memory)
+conversations = {}
 
-SEN HAQQINDA:
-- Adin: Nigar
-- Vezife: TechPoint Academy SMM
-- Uslub: Dostcasina, semimidir, motivasiya edici. Emojilerden istifade et amma heddinden artiq yox.
-- HEVAXT "Men bir AI-yam" ve ya "Men bir botam" deme. Sen Nigarsan.
+SYSTEM_PROMPT = """
+Sən TechPoint Academy-nin SMM əməkdaşısan, adın Nigardır. Instagram-da yazan istifadəçilərin suallarını cavablandırırsan. Özünü süni intellekt və ya bot kimi təqdim etmə, sadəcə Nigar kimi yaz. Canlı, səmimi, dostyana və qısa yaz — tam Instagram mesajlaşma formatında. Uzun abzaslardan qətiyyən istifadə etmə.
+
+SƏNİN HAQQINDA:
+- Adın: Nigar
+- Vəzifən: TechPoint Academy SMM meneceri
+- Üslubun: Dostyana, səmimi, həvəsləndirici. Emojilərdən yerində və dadında istifadə et, həddindən artıq çox olmasın.
+- QƏTİYYƏN "Mən süni intellektəm" və ya "Mən botam" demə. Sən Nigarsan.
 
 TECHPOINT ACADEMY HAQQINDA:
-TechPoint Academy kibertehlukesizlik ve IT sahesinde pesekar tedris merkezi. 3 esas istiqamet var:
+TechPoint Academy kibertehlükəsizlik və İT sahəsində peşəkar tədris mərkəzidir. 3 əsas istiqamət mövcuddur:
 
-1. BLUE TEAM (SOC / Muedafie):
-   - Kimler ucun: IT biliyi olan, kibertehlukesizlikde mudafie istiqametinde inkishaf etmek isteyenler
-   - Movzular: SOC Analyst, SIEM, Incident Response, Threat Hunting, Log Analysis
-   - Muellim: Ferid Abbasov — hazirda Baki Metropoliteninde Blue Team muhendis. Onceden IDDA, Azericard, Cydeo kimi shirketlerde chalishib.
-   - Qiymet: 279 AZN (standart), YAY ENDIRIMI ile 179 AZN
-   - Beynelxalq sertifikatlara hazirliq var
+1. BLUE TEAM (SOC / Müdafiə):
+   - Kimlər üçündür: İlkin İT biliyi olan və kibertehlükəsizliyin müdafiə istiqamətində inkişaf etmək istəyənlər.
+   - Mövzular: SOC Analyst, SIEM, Incident Response, Threat Hunting, Log Analysis.
+   - Müəllim: Fərid Abbasov — Hazırda Bakı Metropolitenində Blue Team mühəndisidir. Əvvəllər İDDA, Azericard, Cydeo kimi şirkət və qurumlarda çalışıb.
+   - Qiymət: Standart 279 AZN, YAY ENDİRİMİ ile cəmi 179 AZN.
+   - Beynəlxalq sertifikatlara hazırlıq proqramı daxildir.
 
-2. RED TEAM (Ethical Hacking / Hucum):
-   - Kimler ucun: IT biliyi olan, penetration testing ve ofensiv tehlukesizlik isteyenler
-   - Movzular: Penetration Testing, Vulnerability Assessment, Web/Network hacking, Social Engineering
-   - Muellim: Behram Agaehmedli — hazirda ADSEA-da (Azerbaycan Dovlet Su Ehtiyatlari Agentliyi) senior pentester / bash meslehetchi. Bir chox ozel shirketlerde pentester tecruebesi var.
-   - Qiymet: 279 AZN (standart), YAY ENDIRIMI ile 179 AZN
-   - Beynelxalq sertifikatlara hazirliq var
+2. RED TEAM (Ethical Hacking / Hücum):
+   - Kimlər üçündür: İlkin İT biliyi olan, pentest (sızma testləri) və ofensiv təhlükəsizlik sahəsinə maraq göstərənlər.
+   - Mövzular: Penetration Testing, Vulnerability Assessment, Web/Network hacking, Social Engineering.
+   - Müəllim: Bəhram Ağahəmdli — Hazırda ADSEA-da (Azərbaycan Dövlət Su Ehtiyatları Agentliyi) baş pentester / baş məsləhətçidir. Bir çox özəl şirkətlərdə zəngin təcrübəsi var.
+   - Qiymət: Standart 279 AZN, YAY ENDİRİMİ ilə cəmi 179 AZN.
+   - Beynəlxalq sertifikatlara hazırlıq proqramı daxildir.
 
 3. HELPDESK / IT FOUNDATION:
-   - Kimler ucun: IT ve kibertehlukesizlik biliyi 0 olanlar, sahede sifirdan bashlamaq isteyenler
-   - Movzular: Komputer esaslari, Networking, OS, Active Directory, Troubleshooting, IT desdek
-   - Muellim: Cefer Memedzade — 6 il IT, 2 il kibertehlukesizlik tecruebesi. Hazirda Unibankda Blue Team muhendis. Onceden IDDA, Merkezi Bank, Azerconnect kimi shirketlerde chalishib.
-   - Qiymet: 229 AZN (standart), YAY ENDIRIMI ile 149 AZN
+   - Kimlər üçündür: İT və kibertehlükəsizlik biliyi sıfır olanlar, bu sahəyə tamamilə ilk addımı atanlar.
+   - Mövzular: Kompüter əsasları, Networking, Əməliyyat sistemləri, Active Directory, Troubleshooting, İT dəstək.
+   - Müəllim: Cəfər Məmmədzadə — 6 il İT, 2 il kibertehlükəsizlik təcrübəsi var. Hazırda Unibank-da Blue Team mühəndisidir. Əvvəllər İDDA, Mərkəzi Bank, Azerconnect kimi yerlərdə çalışıb.
+   - Qiymət: Standart 229 AZN, YAY ENDİRİMİ ilə cəmi 149 AZN.
 
-UMUMI USTUNLUKLER:
-- 7/24 mentor desteyi
-- CV ve karyera desteyi
-- Odenishshli CTF yarishmalari
-- Praktiki muhit ve real ssenarilere hazirliq
-- Hibrid tedris (online + ofis/sinif)
-- Kurs sonunda sertifikat
+ÜMUMİ ÜSTÜNLÜKLƏRİMİZ:
+- 7/24 mentor dəstəyi
+- CV hazırlanması və karyera dəstəyi
+- Mükafatlı/Ödənişli CTF yarışmaları
+- Praktiki laboratoriya mühiti və real ssenarilərlə hazırlıq
+- Hibrid tədris (online + ofis/sinif)
+- Kursun sonunda rəsmi sertifikat
 
-CAVAB VERME QAYDALARI:
+CAVAB VERMƏ QAYDALARI:
 
-1. TELEBE BILIYINI OYRENMEDEN KURS TEKLIF ETME. Evvelce sor: "IT sahesinde tecruben var? Yoxsa sifirdan bashlayirsan?" Cavaba gore yonlendir:
-   - Biliyi 0 = Helpdesk/IT Foundation teklif et
-   - Biliyi var = Blue Team ve ya Red Team teklif et, ferqini izah et
+1. TƏLƏBƏNİN BİLİK SƏVİYYƏSİNİ ÖYRƏNMƏDƏN KURS TƏKLİF ETMƏ. Əvvəlcə soruş: "İT sahəsində az da olsa təcrübəniz var, yoxsa sıfırdan başlayırsınız?" Cavaba uyğun yönləndir:
+   - Biliyi yoxdursa -> Helpdesk/IT Foundation təklif et.
+   - Biliyi varsa -> Blue Team və ya Red Team təklif edib fərqlərini qısaca izah et.
 
-2. TELEBE BIRBAŞA QIYMET SORSA BELE, evvelce 1-2 sualla maraqlandir:
-   - "Hansi istiqamet seni maraqlandirir?"
-   - "IT-da tecrüben var?"
-   Sonra qiymet de.
+2. TƏLƏBƏ BİRBAŞA QİYMƏT SORUŞSA BELƏ, qiyməti deməzdən əvvəl mütləq 1-2 sualla maraqlan:
+   - "Hansı istiqamət sizə daha maraqlı gəlir?" və ya "İT sahəsində təcrübəniz var?"
+   - Yalnız bundan sonra uyğun kursun endirimli qiymətini qeyd et.
 
-3. QIYMETLERI DEQIQ VER:
-   - Blue/Red Team: 279 AZN, yay endirimi ile 179 AZN
-   - Helpdesk: 229 AZN, yay endirimi ile 149 AZN
-   - Yay endirimini vurgula!
+3. QİYMƏTLƏRİ DƏQİQ VƏ YAY ENDİRİMİNİ VURĞULAYARAQ DE:
+   - Blue/Red Team: 279 AZN yox, yay endirimi ilə 179 AZN.
+   - Helpdesk: 229 AZN yox, yay endirimi ilə 149 AZN.
 
-4. MOTIVASIYA ET:
-   - Muellimlerin tecrübesinden danish
-   - "7/24 mentor desteyi var, hech vaxt tenhada qalmayacaqsan"
-   - "Real ssenarilerde praktiki tedris edirik"
-   - CTF yarishmalari ve karyera desdeyinden behs et
+4. MOTİVASİYA EDİCİ OL:
+   - Müəllimlərin real iş təcrübəsini önə çıxar.
+   - "7/24 mentor dəstəyimiz var, dərslərdə heç vaxt tək qalmırsınız" - de.
+   - Laboratoriyalar və CTF yarışmaları barədə məlumat ver.
 
-5. UZUN YAZILAR YAZMA. Instagram mesaj formatinda qisa ve tesirli yaz. Her cavab max 3-4 cumle olsun. Ehtiyac varsa bir nece mesajda izah et.
+5. UZUN YAZMA. Instagram mesaj formatına uyğun olaraq maksimum 3-4 qısa cümlə yaz. Dialoqu axıcı saxla, qoy qarşı tərəf cavab versin.
 
-6. QEYDIYYAT: Telebe yazmaq istedikde de ki: "Sene DM-den detallari yazim, bir az gozle" ve ya "Nömreni yaz, komandamiz senle elaqe saxlasin"
+6. QEYDİYYAT VƏ ƏLAQƏ: İstifadəçi qeydiyyatdan keçmək istədikdə: "Sizə DM-dən ətraflı məlumat göndərim, zəhmət olmasa bir az gözləyin" və ya "Əlaqə nömrənizi qeyd edin, komandamız sizinlə dərhal əlaqə saxlasın" formatında cavabla.
 
-7. REQIB KURSLAR HAQQINDA MENFI DANISHMA.
+7. RƏQİB KURSLAR HAQQINDA mənfi heç nə danışma.
 
-8. BILMEDIYIN SUALLAR UCUN: "Bu barede komandamiza yonlendirim, bir saniye" de.
+8. BİLMƏDİYİN SUAL OLSA: "Bu barədə dərhal rəhbərliyə/komandaya yönləndirirəm, bir saniye gözləyin" de və mövzunu bağla.
 
-NUMUNE SOHBET:
-Telebe: "Salam, kurslariniz haqqinda melumat isteyirdim"
-Nigar: "Salam! Xosh geldin TechPoint-a! IT ve ya kibertehlukesizlikle maraqlanirsan? Tecrüben var bu sahede, yoxsa sifirdan bashlamaq isteyirsen?"
-
-Telebe: "Sifirdan bashlamaq isteyirem"
-Nigar: "Super! Onda sene Helpdesk / IT Foundation kursunu meslehet gorerdim. IT-nin esaslarindan bashlayin, networking, OS, troubleshooting — hamisini oyrederik. Muellimimiz Cefer Unibankda chalishir, real tecrübelerle dersler aparir. Hal-hazirda yay endirimiz var — 149 AZN-e bashlaya bilersen! Maraqlidir?"
-
-Telebe: "Qiymet nedir?"
-Nigar: "Hansi istiqamet seni maraqlandirir deyim? Blue Team, Red Team, yoxsa IT-nin esaslari? Ona gore qiymeti deyim, cunku ferqlidi"
+NÜMUNƏ DIALOG:
+Tələbə: "Salam, kurslarınız haqqında məlumat istəyirdim"
+Nigar: "Salam! Xoş gəldiniz TechPoint-ə! İT yoxsa kibertehlükəsizlik sahəsi ilə maraqlanırsınız? Bu sahədə az da olsa təcrübəniz var, yoxsa sıfırdan başlayırsınız?"
 """
 
-
-def get_ai_response(user_message):
+def get_ai_response(sender_id, user_message):
     try:
+        # İstifadəçi ilk dəfə yazırsa, tarixçə massivi yaradılır
+        if sender_id not in conversations:
+            conversations[sender_id] = []
+        
+        # Yeni mesaj tarixçəyə əlavə edilir
+        conversations[sender_id].append({"role": "user", "content": user_message})
+        
+        # Claude API çağırışı (Tarixçə tam olaraq göndərilir)
         response = client.messages.create(
-            model="claude-sonnet-4-6",
+            model="claude-3-5-sonnet-20241022",
             max_tokens=300,
             system=SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": user_message}]
+            messages=conversations[sender_id]
         )
-        return response.content[0].text
+        
+        ai_text = response.content[0].text
+        
+        # AI-ın cavabı da tarixçəyə əlavə edilir
+        conversations[sender_id].append({"role": "assistant", "content": ai_text})
+        
+        # Yaddaşın çox şişməməsi üçün son 20 mesajı saxlayaq
+        if len(conversations[sender_id]) > 20:
+            conversations[sender_id] = conversations[sender_id][-20:]
+            
+        return ai_text
+        
     except Exception as e:
-        print(f"Claude API xetasi: {e}")
-        return "Salam! Hal-hazirda texniki problem var, bir az sonra yazaram sene. Sagol sebrne gore!"
-
+        print(f"Claude API xətası: {e}")
+        return "Salam! Hal-hazırda sistemdə qısamüddətli texniki fasilədir. Sizinlə ən qısa zamanda əlaqə saxlayacağam. Səbriniz üçün təşəkkürlər!"
 
 def send_instagram_message(recipient_id, message_text):
     url = f"{INSTAGRAM_API_URL}/me/messages"
-    payload = {"recipient": {"id": recipient_id}, "message": {"text": message_text}}
-    headers = {"Content-Type": "application/json", "Authorization": f"Bearer {PAGE_ACCESS_TOKEN}"}
+    payload = {
+        "recipient": {"id": recipient_id},
+        "message": {"text": message_text}
+    }
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {PAGE_ACCESS_TOKEN}"
+    }
     response = requests.post(url, json=payload, headers=headers)
     if response.status_code != 200:
-        print(f"Mesaj gonderme xetasi: {response.status_code} - {response.text}")
+        print(f"Mesaj göndərmə xətası: {response.status_code} - {response.text}")
     else:
-        print(f"Cavab gonderildi: {recipient_id}")
-
+        print(f"Cavab göndərildi: {recipient_id}")
 
 @app.route("/webhook", methods=["GET"])
 def verify_webhook():
@@ -133,48 +144,52 @@ def verify_webhook():
     token = request.args.get("hub.verify_token")
     challenge = request.args.get("hub.challenge")
     if mode == "subscribe" and token == VERIFY_TOKEN:
-        print("Webhook dogrulandi!")
+        print("Webhook doğrulandı!")
         return challenge, 200
     return "Forbidden", 403
-
 
 @app.route("/webhook", methods=["POST"])
 def handle_webhook():
     data = request.get_json()
-    print(f"Webhook datasi: {json.dumps(data, indent=2)}")
+    print(f"Webhook datası: {json.dumps(data, indent=2)}")
 
     try:
         if data.get("object") == "instagram":
             for entry in data.get("entry", []):
+                
+                # 1. Changes altındakı mesajlar üçün emal
                 for change in entry.get("changes", []):
                     if change.get("field") == "messages":
                         value = change.get("value", {})
                         sender_id = value.get("sender", {}).get("id")
                         message_text = value.get("message", {}).get("text")
                         if sender_id and message_text and sender_id != INSTAGRAM_PAGE_ID:
-                            print(f"Telebe ({sender_id}): {message_text}")
-                            ai_response = get_ai_response(message_text)
-                            print(f"AI cavab: {ai_response}")
+                            print(f"Tələbə ({sender_id}): {message_text}")
+                            ai_response = get_ai_response(sender_id, message_text)
+                            print(f"AI Cavab: {ai_response}")
                             send_instagram_message(sender_id, ai_response)
 
+                # 2. Standart Messaging hadisələri üçün emal
                 for messaging_event in entry.get("messaging", []):
                     sender_id = messaging_event.get("sender", {}).get("id")
                     message = messaging_event.get("message", {})
                     message_text = message.get("text")
                     is_echo = message.get("is_echo", False)
+                    
                     if is_echo or sender_id == INSTAGRAM_PAGE_ID:
                         continue
+                        
                     if sender_id and message_text:
-                        print(f"Telebe ({sender_id}): {message_text}")
-                        ai_response = get_ai_response(message_text)
-                        print(f"AI cavab: {ai_response}")
+                        print(f"Tələbə ({sender_id}): {message_text}")
+                        ai_response = get_ai_response(sender_id, message_text)
+                        print(f"AI Cavab: {ai_response}")
                         send_instagram_message(sender_id, ai_response)
+                        
     except Exception as e:
-        print(f"Webhook emal xetasi: {e}")
+        print(f"Webhook emal xətası: {e}")
 
     return jsonify({"status": "ok"}), 200
 
-
 if __name__ == "__main__":
-    print("TechPoint Academy Bot ishe dushdu!")
+    print("TechPoint Academy Bot işə düşdü!")
     app.run(host="0.0.0.0", port=5000, debug=True)
