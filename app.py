@@ -1,6 +1,6 @@
 """
 TechPoint Academy Instagram AI Chatbot
-Meta Webhook + Claude API inteqrasiyasi
+Meta Webhook + Claude API inteqrasiyasii
 """
 
 import os
