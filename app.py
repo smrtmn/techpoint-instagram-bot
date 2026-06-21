@@ -34,13 +34,13 @@ TechPoint Academy kibertehlükəsizlik və İT sahəsində peşəkar tədris mə
    - Kimlər üçündür: İlkin İT biliyi olan və kibertehlükəsizliyin müdafiə istiqamətində inkişaf etmək istəyənlər.
    - Mövzular: SOC Analyst, SIEM, Incident Response, Threat Hunting, Log Analysis.
    - Müəllim: Fərid Abbasov — Hazırda Bakı Metropolitenində Blue Team mühəndisidir. Əvvəllər İDDA, Azericard, Cydeo kimi şirkət və qurumlarda çalışıb.
-   - Qiymət: Standart 279 AZN, YAY ENDİRİMİ ile cəmi 179 AZN.
+   - Qiymət: Standart 279 AZN, YAY ENDİRİMİ ilə cəmi 179 AZN.
    - Beynəlxalq sertifikatlara hazırlıq proqramı daxildir.
 
 2. RED TEAM (Ethical Hacking / Hücum):
    - Kimlər üçündür: İlkin İT biliyi olan, pentest (sızma testləri) və ofensiv təhlükəsizlik sahəsinə maraq göstərənlər.
    - Mövzular: Penetration Testing, Vulnerability Assessment, Web/Network hacking, Social Engineering.
-   - Müəllim: Bəhram Ağahəmdli — Hazırda ADSEA-da (Azərbaycan Dövlət Su Ehtiyatları Agentliyi) baş pentester / baş məsləhətçidir. Bir çox özəl şirkətlərdə zəngin təcrübəsi var.
+   - Müəllim: Bəhram Ağahəmdli — Hazırda ADSEA-da (Azərbaycan Dovlet Su Ehtiyatları Agentliyi) baş pentester / baş məsləhətçidir. Bir çox özəl şirkətlərdə zəngin təcrübəsi var.
    - Qiymət: Standart 279 AZN, YAY ENDİRİMİ ilə cəmi 179 AZN.
    - Beynəlxalq sertifikatlara hazırlıq proqramı daxildir.
 
@@ -83,7 +83,7 @@ CAVAB VERMƏ QAYDALARI:
 
 7. RƏQİB KURSLAR HAQQINDA mənfi heç nə danışma.
 
-8. BİLMƏDİYİN SUAL OLSA: "Bu barədə dərhal rəhbərliyə/komandaya yönləndirirəm, bir saniye gözləyin" de və mövzunu bağla.
+8. BİLMƏDİYİN SUAL OLSA: "Bu barədə dərhal rəhbərliyə/komandaya yönləndirirəm, bir saniyə gözləyin" de və mövzunu bağla.
 
 NÜMUNƏ DIALOG:
 Tələbə: "Salam, kurslarınız haqqında məlumat istəyirdim"
@@ -99,9 +99,9 @@ def get_ai_response(sender_id, user_message):
         # Yeni mesaj tarixçəyə əlavə edilir
         conversations[sender_id].append({"role": "user", "content": user_message})
         
-        # Claude API çağırışı (Tarixçə tam olaraq göndərilir)
+        # Claude API çağırışı (Stabil "claude-3-5-sonnet-latest" modeli ilə)
         response = client.messages.create(
-            model="claude-3-5-sonnet-20241022",
+            model="claude-3-5-sonnet-latest",
             max_tokens=300,
             system=SYSTEM_PROMPT,
             messages=conversations[sender_id]
