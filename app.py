@@ -15,9 +15,6 @@ INSTAGRAM_API_URL = "https://graph.instagram.com/v21.0"
 
 client = Anthropic(api_key=ANTHROPIC_API_KEY)
 
-# Söhbət tarixçəsini saxlayan lüğət
-conversations = {}
-
 SYSTEM_PROMPT = """
 Sən TechPoint Academy-nin SMM əməkdaşısan, adın Nigardır. Instagram-da yazan istifadəçilərin suallarını cavablandırırsan. Özünü süni intellekt və ya bot kimi təqdim etmə, sadəcə Nigar kimi yaz. Canlı, səmimi, dostyana və qısa yaz — tam Instagram mesajlaşma formatında. Uzun abzaslardan qətiyyən istifadə etmə.
 
@@ -90,43 +87,24 @@ Tələbə: "Salam, kurslarınız haqqında məlumat istəyirdim"
 Nigar: "Salam! Xoş gəldiniz TechPoint-ə! İT yoxsa kibertehlükəsizlik sahəsi ilə maraqlanırsınız? Bu sahədə az da olsa təcrübəniz var, yoxsa sıfırdan başlayırsınız?"
 """
 
-def get_ai_response(sender_id, user_message):
+def get_ai_response(user_message):
     try:
-        if sender_id not in conversations:
-            conversations[sender_id] = []
-        
-        conversations[sender_id].append({"role": "user", "content": user_message})
-        
-        # MODEL ADI DƏQİQ TUŞLANDI: Anthropic Messages API formatına tam uyğundur
+        # İLK KODDAKI KİMİ REQURMENT: Sırf gələn tək mesajı göndərir, model adı 404 xətası verməyən formatda düzəldildi
         response = client.messages.create(
             model="claude-3-5-sonnet-20241022",
             max_tokens=300,
             system=SYSTEM_PROMPT,
-            messages=conversations[sender_id]
+            messages=[{"role": "user", "content": user_message}]
         )
-        
-        ai_text = response.content[0].text
-        conversations[sender_id].append({"role": "assistant", "content": ai_text})
-        
-        if len(conversations[sender_id]) > 20:
-            conversations[sender_id] = conversations[sender_id][-20:]
-            
-        return ai_text
-        
+        return response.content[0].text
     except Exception as e:
         print(f"Claude API xətası: {e}")
         return "Salam! Hal-hazırda sistemdə qısamüddətli texniki fasilədir. Sizinlə ən qısa zamanda əlaqə saxlayacağam. Səbriniz üçün təşəkkürlər!"
 
 def send_instagram_message(recipient_id, message_text):
     url = f"{INSTAGRAM_API_URL}/me/messages"
-    payload = {
-        "recipient": {"id": recipient_id},
-        "message": {"text": message_text}
-    }
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {PAGE_ACCESS_TOKEN}"
-    }
+    payload = {"recipient": {"id": recipient_id}, "message": {"text": message_text}}
+    headers = {"Content-Type": "application/json", "Authorization": f"Bearer {PAGE_ACCESS_TOKEN}"}
     response = requests.post(url, json=payload, headers=headers)
     if response.status_code != 200:
         print(f"Mesaj göndərmə xətası: {response.status_code} - {response.text}")
@@ -151,45 +129,29 @@ def handle_webhook():
     try:
         if data.get("object") == "instagram":
             for entry in data.get("entry", []):
-                
-                # 1. Changes altındakı mesajlar üçün emal (Echo-ları filterləyirik)
                 for change in entry.get("changes", []):
                     if change.get("field") == "messages":
                         value = change.get("value", {})
-                        
-                        # Əgər mesaj botun öz göndərdiyi "echo" mesajıdırsa, emal etmə
-                        if value.get("message", {}).get("is_echo") or value.get("message", {}).get("is_deleted"):
-                            continue
-                            
                         sender_id = value.get("sender", {}).get("id")
                         message_text = value.get("message", {}).get("text")
-                        
                         if sender_id and message_text and sender_id != INSTAGRAM_PAGE_ID:
                             print(f"Tələbə ({sender_id}): {message_text}")
-                            ai_response = get_ai_response(sender_id, message_text)
-                            print(f"AI Cavab: {ai_response}")
+                            ai_response = get_ai_response(message_text)
+                            print(f"AI cavab: {ai_response}")
                             send_instagram_message(sender_id, ai_response)
 
-                # 2. Standart Messaging hadisələri üçün emal
                 for messaging_event in entry.get("messaging", []):
-                    # 'read' (oxundu) bildirişləri gələndə içində 'message' olmur, keçirik
-                    if "message" not in messaging_event:
-                        continue
-                        
                     sender_id = messaging_event.get("sender", {}).get("id")
                     message = messaging_event.get("message", {})
                     message_text = message.get("text")
                     is_echo = message.get("is_echo", False)
-                    
                     if is_echo or sender_id == INSTAGRAM_PAGE_ID:
                         continue
-                        
                     if sender_id and message_text:
                         print(f"Tələbə ({sender_id}): {message_text}")
-                        ai_response = get_ai_response(sender_id, message_text)
-                        print(f"AI Cavab: {ai_response}")
+                        ai_response = get_ai_response(message_text)
+                        print(f"AI cavab: {ai_response}")
                         send_instagram_message(sender_id, ai_response)
-                        
     except Exception as e:
         print(f"Webhook emal xətası: {e}")
 
